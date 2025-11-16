@@ -1,0 +1,25 @@
+# Core dependencies
+torch>=1.10.0
+torchvision>=0.11.0
+opencv-python>=4.5.0
+numpy>=1.21.0
+
+# YOLOv5 dependencies
+matplotlib>=3.3
+Pillow>=8.0
+PyYAML>=5.3
+requests>=2.23
+scipy>=1.5
+tqdm>=4.64
+pandas>=1.1
+
+# Optional: Conveyor belt control
+python-kasa>=0.5.0
+
+# Optional: xArm control (if using xArm SDK)
+# Note: xArm SDK typically requires manual installation
+# Follow manufacturer instructions for xArm Python SDK
+
+# Optional: Advanced features
+seaborn>=0.11  # For visualization
+tensorboard>=2.4  # For training monitoring
