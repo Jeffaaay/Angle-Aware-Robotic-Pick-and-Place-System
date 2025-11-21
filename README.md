@@ -2,305 +2,327 @@
 
 A sophisticated robotic manipulation system that combines YOLOv5 object detection with dynamic gripper rotation and automated conveyor belt control for intelligent pick-and-place operations.
 
-## Features
+![System Status](https://img.shields.io/badge/status-active-brightgreen)
+![Python Version](https://img.shields.io/badge/python-3.9%2B-blue)
+![License](https://img.shields.io/badge/license-MIT-green)
 
-- **Angle-Aware Gripper Rotation**: Automatically detects object orientation and adjusts gripper rotation angle for optimal pickup
-- **YOLOv5 Object Detection**: Real-time object detection with customizable class filtering
-- **Automated Conveyor Control**: Smart plug integration for automatic conveyor belt start/stop during pick operations
-- **ROI-Based Targeting**: Configurable region of interest for precise object positioning
-- **Stability Tracking**: Ensures stable detections before triggering arm movements
-- **Dynamic Sequence Building**: Generates arm movement sequences adapted to object orientation
+## 🎯 Overview
 
-## System Architecture
+This system integrates computer vision, robotic control, and automation to create an intelligent sorting system capable of:
+
+- **Real-time object detection** using YOLOv5/Roboflow models
+- **Angle-aware gripper rotation** that adapts to object orientation
+- **Dual-box sorting** (recyclable vs. non-recyclable items)
+- **Automated conveyor control** via smart plug integration
+- **Position fine-tuning** for precise object pickup
+- **ROI-priority selection** for optimal target acquisition
+- **State machine coordination** for reliable operation
+
+## ✨ Key Features
+
+### 🤖 Angle-Aware Gripper Rotation
+Automatically detects object orientation and adjusts gripper rotation angle for optimal pickup of bottles and cylindrical objects.
+
+### 🎯 ROI-Based Targeting
+Configurable region of interest ensures the system prioritizes objects in the optimal pickup zone, improving reliability and success rate.
+
+### 📦 Dual-Box Sorting
+Intelligently categorizes and sorts objects into two boxes:
+- **Left Box**: Recyclable items (plastic bottles, glass bottles, metal cans)
+- **Right Box**: Non-recyclable items (paper cups, chip bags)
+
+### ⚡ Automated Conveyor Control
+Smart plug integration automatically stops the conveyor during picking operations and restarts it afterward, eliminating manual intervention.
+
+### 🎚️ Position Fine-Tuning
+Dynamic servo adjustments compensate for object position offsets from the ideal center point, improving pickup accuracy.
+
+### 🔄 State Machine Architecture
+Robust state management (IDLE → PICKING → COOLDOWN → IDLE) prevents race conditions and ensures safe, coordinated operation.
+
+### 📊 Stability Tracking
+Requires multiple consecutive stable detections before triggering arm movement, reducing false positives and improving reliability.
+
+## 🛠️ System Architecture
 
 ```
 Camera Feed → YOLOv5 Detection → Angle Detection → Gripper Rotation Calculation
                                                            ↓
                                                     Arm Controller
                                                            ↓
-                                              [Conveyor Auto-Stop/Start]
+                                               [Conveyor Auto-Stop/Start]
 ```
 
-## Hardware Requirements
+### Component Flow
 
-- **Robot Arm**: xArm manipulator (6 servos)
+1. **Detection Phase**: Camera captures frame → YOLOv5 detects objects → ROI-priority selection
+2. **Analysis Phase**: Object angle detection → Position offset calculation → Servo adjustment computation
+3. **Execution Phase**: Conveyor stops → Arm executes pick sequence → Object sorted to appropriate box
+4. **Reset Phase**: Arm returns home → Conveyor restarts → System returns to IDLE state
+
+## 📋 Requirements
+
+### Hardware
+- **Robotic Arm**: xArm compatible robotic arm with 6+ servos
 - **Camera**: USB camera (1920x1080 recommended)
-- **Conveyor Belt**: Optional, controlled via Kasa Smart Plug
-- **Computer**: CUDA-capable GPU recommended for real-time performance
+- **Conveyor Belt**: Motorized conveyor with Kasa smart plug control
+- **Computer**: System capable of running real-time object detection
 
-## Software Requirements
+### Software Dependencies
 
-```bash
-pip install torch torchvision
-pip install opencv-python
-pip install numpy
-pip install python-kasa  # Optional, for conveyor control
-```
-
-## Installation
-
-1. Clone this repository:
-```bash
-git clone https://github.com/yourusername/angle-aware-pick-place.git
-cd angle-aware-pick-place
-```
-
-2. Install dependencies:
 ```bash
 pip install -r requirements.txt
 ```
 
-3. Download YOLOv5 weights (optional, will auto-download if not present):
+**Core Dependencies:**
+- Python 3.9+
+- OpenCV (cv2)
+- NumPy
+- Roboflow Inference SDK
+- python-kasa (for smart plug control)
+- xarm-python (for robotic arm control)
+
+## 🚀 Quick Start
+
+### 1. Installation
+
 ```bash
-# The script will automatically download yolov5s if yolov5s.pt is not found
-# Or manually download:
-wget https://github.com/ultralytics/yolov5/releases/download/v6.0/yolov5s.pt
+# Clone the repository
+git clone https://github.com/yourusername/angle-aware-robotic-pick-and-place.git
+cd angle-aware-robotic-pick-and-place
+
+# Install dependencies
+pip install -r requirements.txt
 ```
 
-## Configuration
+### 2. Configuration
+
+Edit the configuration constants at the top of `main.py`:
+
+```python
+# Roboflow Model Configuration
+ROBOFLOW_MODEL_ID = "your-model-id/version"
+ROBOFLOW_API_KEY = "your-api-key"
+
+# Conveyor Belt Configuration
+CONVEYOR_PLUG_IP = "192.168.1.xxx"
+
+# Object Categories
+RECYCLABLE_ITEMS = ['plastic_bottle', 'glass_bottle', 'metal-can']
+NON_RECYCLABLE_ITEMS = ['paper cup', 'chips_bag']
+```
+
+### 3. Basic Usage
+
+```bash
+# Run with default settings
+python main.py
+
+# Run with angle detection enabled
+python main.py --use_angle
+
+# Run with custom confidence threshold
+python main.py --conf 0.5 --use_angle
+
+# Run with angle visualization
+python main.py --use_angle --show_angle
+```
+
+### 4. Advanced Options
+
+```bash
+python main.py \
+  --source 0 \              # Camera index
+  --width 1920 \            # Frame width
+  --height 1080 \           # Frame height
+  --conf 0.40 \             # Confidence threshold
+  --cooldown 2.0 \          # Cooldown between picks (seconds)
+  --stable_n 2 \            # Stability frames required
+  --roi_x 0.15 \            # ROI horizontal margin
+  --roi_y 0.15 \            # ROI vertical margin
+  --use_angle \             # Enable angle-aware rotation
+  --show_angle \            # Display detected angles
+  --conveyor_ip 192.168.1.100  # Smart plug IP address
+```
+
+## 🎛️ Configuration Guide
 
 ### Gripper Rotation Settings
 
-Edit the configuration constants in `detect5_angle_aware.py`:
-
 ```python
-GRIP_ROT_SERVO_ID = 2        # Servo controlling gripper rotation (1-6)
-GRIP_ROT_NEUTRAL = 500       # Neutral position (0° orientation)
-GRIP_ROT_MIN = 130           # Minimum servo value (-90°)
-GRIP_ROT_MAX = 875           # Maximum servo value (+90°)
+# Servo Configuration
+GRIP_ROT_SERVO_ID = 2          # Gripper rotation servo ID
+GRIP_ROT_NEUTRAL = 500         # Neutral position (0°)
+GRIP_ROT_MIN = 130             # Minimum rotation (-90°)
+GRIP_ROT_MAX = 875             # Maximum rotation (+90°)
+GRIP_ROT_FIXED = 130           # Fixed rotation for non-cylindrical objects
 
-# Angle adjustment thresholds
-ANGLE_ADJUST_MIN = -35.0     # Only adjust if angle within this range
-ANGLE_ADJUST_MAX = 35.0      # Outside this range, use neutral position
-
-# Which steps in sequence get rotation applied
-ROTATION_AFFECTED_STEPS = [1, 2, 3]  # Reach, Grip, Lift
+# Angle Adjustment Range
+ANGLE_ADJUST_MIN = -35.0       # Minimum angle threshold
+ANGLE_ADJUST_MAX = 35.0        # Maximum angle threshold
 ```
 
-### Conveyor Belt Settings
+### Position Fine-Tuning Settings
 
 ```python
-CONVEYOR_PLUG_IP = "10.0.0.94"  # Change to your Kasa smart plug IP
+ENABLE_FINE_TUNING = True      # Enable/disable fine-tuning
+FINE_TUNE_HORIZONTAL_SERVO = 6 # Servo for horizontal adjustment
+FINE_TUNE_HORIZONTAL_FACTOR = 0.15  # Pixels to servo conversion
+FINE_TUNE_HORIZONTAL_MAX = 100 # Maximum adjustment limit
+
+FINE_TUNE_VERTICAL_SERVO = 3   # Servo for vertical adjustment
+FINE_TUNE_VERTICAL_FACTOR = -0.10  # Pixels to servo conversion
+FINE_TUNE_VERTICAL_MAX = 80    # Maximum adjustment limit
+
+# Deadzone Configuration
+FINE_TUNE_DEADZONE_X = 20      # Horizontal deadzone (pixels)
+FINE_TUNE_DEADZONE_Y = 20      # Vertical deadzone (pixels)
 ```
 
-### Arm Sequence
-
-Modify `BASE_ARM_SEQUENCE` to match your robot's workspace:
+### Object Categorization
 
 ```python
-BASE_ARM_SEQUENCE = [
-    [250, 500, 300, 900, 700, 500],  # Home position
-    [250, 500, 150, 660, 330, 500],  # Reach position
-    # ... customize for your setup
+# Recyclable Objects (→ Left Box)
+RECYCLABLE_ITEMS = ['plastic_bottle', 'glass_bottle', 'metal-can']
+
+# Non-Recyclable Objects (→ Right Box)
+NON_RECYCLABLE_ITEMS = ['paper cup', 'chips_bag']
+
+# Angle Detection Objects
+ANGLE_DETECTION_OBJECTS = ['plastic_bottle', 'glass_bottle']
+
+# Fixed Rotation Objects
+FIXED_ROTATION_OBJECTS = ['paper cup', 'chips_bag', 'metal-can']
+```
+
+### Arm Movement Sequences
+
+Sequences are defined for left and right box sorting. Each sequence is a list of servo positions for 6 servos.
+
+```python
+BASE_ARM_SEQUENCE_LEFT = [
+    [100, 500, 300, 900, 700, 500],  # Home position
+    [100, 500, 150, 660, 310, 500],  # Reach
+    # ... additional steps
 ]
 ```
 
-## Usage
+## 📊 System States
 
-### Basic Detection (No Angle Adjustment)
+The system operates through a finite state machine:
 
-```bash
-python detect5_angle_aware.py --source 0 --classes "bottle,cup,book"
-```
+| State | Description | Conveyor | Arm | Duration |
+|-------|-------------|----------|-----|----------|
+| **IDLE** | Normal detection mode | Running | Idle | Continuous |
+| **PICKING** | Executing pick sequence | Stopped | Active | ~3-5 seconds |
+| **COOLDOWN** | Post-pick recovery | Running | Idle | Configurable |
 
-### Angle-Aware Mode
+## 🔧 Troubleshooting
 
-```bash
-python detect5_angle_aware.py \
-    --source 0 \
-    --use_angle \
-    --show_angle \
-    --classes "bottle,cup,book" \
-    --conf 0.5
-```
+### Common Issues
 
-### With Conveyor Control
+**Problem**: Objects not being detected
+- Solution: Adjust `--conf` threshold (try 0.3-0.5)
+- Solution: Verify camera is working with `python -m cv2.VideoCapture(0)`
+- Solution: Check Roboflow model ID and API key
 
-```bash
-python detect5_angle_aware.py \
-    --source 0 \
-    --use_angle \
-    --use_conveyor \
-    --conveyor_ip 10.0.0.94 \
-    --classes "bottle,cup,book"
-```
+**Problem**: Conveyor not responding
+- Solution: Verify smart plug IP address
+- Solution: Check network connectivity: `ping <plug_ip>`
+- Solution: Ensure python-kasa is installed: `pip install python-kasa`
+
+**Problem**: Arm movements are inaccurate
+- Solution: Enable position fine-tuning with `ENABLE_FINE_TUNING = True`
+- Solution: Adjust fine-tuning factors in configuration
+- Solution: Verify servo calibration
+
+**Problem**: "Event loop is closed" error
+- Solution: This has been fixed in the latest version with proper asyncio handling
+- Solution: Update to the latest code version
+
+**Problem**: Race conditions during picking
+- Solution: State machine prevents this - ensure latest version
+- Solution: Increase cooldown period if needed
 
 ### Debug Mode
 
+Enable debug features for troubleshooting:
+
 ```bash
-python detect5_angle_aware.py \
-    --source 0 \
-    --use_angle \
-    --debug_angle \
-    --show_angle
+# Show angle detection debug windows
+python main.py --use_angle --debug_angle
+
+# Display detected angles on frame
+python main.py --use_angle --show_angle
+
+# Reduce skip frames for more frequent detection
+python main.py --skip_frames 0
 ```
 
-## Command-Line Arguments
+## 📈 Performance Optimization
 
-| Argument | Type | Default | Description |
-|----------|------|---------|-------------|
-| `--source` | int | 0 | Camera source index |
-| `--width` | int | 1920 | Camera width |
-| `--height` | int | 1080 | Camera height |
-| `--fps` | int | 30 | Camera FPS |
-| `--conf` | float | 0.40 | Detection confidence threshold |
-| `--classes` | str | 'bottle,cup...' | Comma-separated class names to detect |
-| `--cooldown` | float | 2.0 | Cooldown between pick actions (seconds) |
-| `--stable_n` | int | 5 | Frames required for stable detection |
-| `--roi_x` | float | 0.15 | ROI margin X (0-1) |
-| `--roi_y` | float | 0.15 | ROI margin Y (0-1) |
-| `--skip_frames` | int | 0 | Skip N frames between detections |
-| `--inference_size` | int | 640 | YOLOv5 inference size |
-| `--use_angle` | flag | False | Enable angle-aware gripper rotation |
-| `--debug_angle` | flag | False | Show angle detection debug windows |
-| `--show_angle` | flag | False | Display detected angle on frame |
-| `--use_conveyor` | flag | False | Enable conveyor belt control |
-| `--conveyor_ip` | str | 10.0.0.94 | Kasa smart plug IP address |
+### Detection Performance
+- Adjust `--skip_frames` to balance speed vs. accuracy
+- Use `--inference_size 640` for faster inference (default)
+- Consider GPU acceleration for Roboflow inference
 
-## How It Works
+### Pickup Accuracy
+- Calibrate ROI margins (`--roi_x`, `--roi_y`) for your setup
+- Adjust stability threshold (`--stable_n`) based on conveyor speed
+- Fine-tune position adjustment factors
 
-### 1. Object Detection
-- YOLOv5 detects objects in camera feed
-- Filters detections by specified classes and confidence threshold
-- Tracks object stability within ROI
+### System Reliability
+- Increase cooldown period for faster conveyor speeds
+- Adjust angle detection thresholds for your objects
+- Consider adding object-specific servo sequences
 
-### 2. Angle Detection
-When `--use_angle` is enabled:
-- Extracts bounding box region of detected object
-- Applies adaptive thresholding and contour detection
-- Calculates minimum area rectangle to determine orientation
-- Returns angle in range [-90°, +90°]
+## 🤝 Contributing
 
-### 3. Gripper Rotation Calculation
-```python
-# Example: Object at 20° → Gripper rotates to 20°
-# Object at 60° → Gripper uses neutral (outside threshold)
+Contributions are welcome! Please feel free to submit a Pull Request. For major changes, please open an issue first to discuss what you would like to change.
 
-if ANGLE_ADJUST_MIN <= angle <= ANGLE_ADJUST_MAX:
-    servo_value = angle_to_servo(angle)
-else:
-    servo_value = GRIP_ROT_NEUTRAL
-```
+### Development Setup
 
-### 4. Dynamic Sequence Generation
-- Copies base arm sequence
-- Modifies specified steps with calculated rotation value
-- Applies rotation to reach, grip, and lift steps
-
-### 5. Conveyor Control
-- **Before Pick**: Stops conveyor belt
-- **During Pick**: Executes arm sequence
-- **After Pick**: Restarts conveyor belt
-
-## Angle Detection Methods
-
-The system provides two angle detection algorithms:
-
-### 1. Minimum Area Rectangle (Default)
-- Fast and robust
-- Best for rectangular/elongated objects
-- Uses OpenCV's `minAreaRect()`
-
-### 2. Image Moments (Alternative)
-- Better for irregular shapes
-- More computationally intensive
-- Available via `detect_angle_from_moments()`
-
-## Troubleshooting
-
-### Camera Not Opening
 ```bash
-# Linux: Check camera permissions
-sudo usermod -a -G video $USER
+# Clone your fork
+git clone https://github.com/yourusername/angle-aware-robotic-pick-and-place.git
 
-# Test camera
-python -c "import cv2; cap = cv2.VideoCapture(0); print(cap.isOpened())"
+# Create a feature branch
+git checkout -b feature/amazing-feature
+
+# Make your changes and commit
+git commit -m "Add amazing feature"
+
+# Push to your fork
+git push origin feature/amazing-feature
 ```
 
-### xArm Not Connecting
-- Ensure USB cable is properly connected
-- Check device permissions (Linux)
-- Verify xArm SDK is installed correctly
+## 📝 License
 
-### Conveyor Not Responding
-- Verify Kasa smart plug IP address
-- Check network connectivity
-- Ensure python-kasa is installed
-```bash
-pip install python-kasa
-```
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-### Poor Angle Detection
-- Improve lighting conditions
-- Adjust `ANGLE_ADJUST_MIN` and `ANGLE_ADJUST_MAX` thresholds
-- Use `--debug_angle` to visualize detection
+## 🙏 Acknowledgments
 
-## Performance Optimization
+- Roboflow for object detection infrastructure
+- xArm community for robotic control libraries
+- python-kasa project for smart plug integration
+- OpenCV community for computer vision tools
 
-- **GPU Acceleration**: Automatically used if CUDA available
-- **Frame Skipping**: Use `--skip_frames` to reduce CPU load
-- **Inference Size**: Reduce `--inference_size` for faster detection (trade-off: accuracy)
-- **ROI Size**: Smaller ROI = faster processing
+## 📧 Contact
 
-## Project Structure
+Jeff - [@yourusername](https://github.com/Jeffaaay)
 
-```
-angle-aware-pick-place/
-├── detect5_angle_aware.py    # Main detection and control script
-├── calibration.py            # Camera-arm calibration system (optional)
-├── requirements.txt          # Python dependencies
-├── README.md                # This file
-└── yolov5s.pt               # YOLOv5 weights (auto-downloaded)
-```
+Project Link: [https://github.com/Jeffaaay/Angle-Aware-Robotic-Pick-and-Place-System](https://github.com/Jeffaaay/Angle-Aware-Robotic-Pick-and-Place-System)
 
-## Safety Considerations
+## 🗺️ Roadmap
 
-⚠️ **Important Safety Notes:**
-
-- Always test arm movements in a safe environment
-- Ensure emergency stop is accessible
-- Start with dry runs (no arm connected) to verify logic
-- Use appropriate force limits on robot arm
-- Keep workspace clear of obstacles
-- Monitor first runs closely
-
-## Contributing
-
-Contributions welcome! Please:
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Submit a pull request
-
-## Future Enhancements
-
-- [ ] Multi-object tracking and prioritization
-- [ ] 3D pose estimation integration
-- [ ] Adaptive gripper force control
-- [ ] Machine learning-based angle refinement
-- [ ] Web-based monitoring dashboard
-- [ ] Support for multiple arm types
-
-## License
-
-MIT License - See LICENSE file for details
-
-## Acknowledgments
-
-- YOLOv5 by Ultralytics
-- xArm SDK
-- python-kasa library
-- OpenCV community
-
-## Contact
-
-For questions or issues, please open an issue on GitHub.
+- [ ] Add support for additional object categories
+- [ ] Implement machine learning-based grip force optimization
+- [ ] Add web-based monitoring dashboard
+- [ ] Support for multiple robotic arms
+- [ ] Integration with industrial conveyor systems
+- [ ] Real-time performance analytics
+- [ ] Multi-camera support for 3D positioning
 
 ---
 
-**Status**: Production-ready with active development
-
-**Version**: 1.0.0
-
-**Last Updated**: November 2025
+**Note**: This system is designed for educational and research purposes. Ensure proper safety measures when operating robotic equipment.
