@@ -309,7 +309,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 📧 Contact
 
-Jeff - [@yourusername](https://github.com/Jeffaaay)
+Jeff - [@Jeffaaay](https://github.com/Jeffaaay)
 
 Project Link: [https://github.com/Jeffaaay/Angle-Aware-Robotic-Pick-and-Place-System](https://github.com/Jeffaaay/Angle-Aware-Robotic-Pick-and-Place-System)
 
